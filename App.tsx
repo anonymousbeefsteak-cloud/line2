@@ -24,43 +24,47 @@ const App: React.FC = () => {
     const [submittedOrderId, setSubmittedOrderId] = useState('');
     const [lineUserId, setLineUserId] = useState<string | null>(null);
     const [liffError, setLiffError] = useState<string | null>(null);
+    const [isLiffInitializing, setIsLiffInitializing] = useState(true);
     
     useEffect(() => {
         const initializeLiff = async () => {
+            // In a non-LINE environment, we can finish initialization quickly.
+            if (typeof liff === 'undefined') {
+                setTimeout(() => setIsLiffInitializing(false), 200); // Small delay for UX
+                console.warn("LIFF SDK not found. App will function without LINE integration.");
+                return;
+            }
+
             try {
                 await liff.init({ liffId: "2008274702-xD3Xd2M6" });
 
-                // Only perform login/profile retrieval if the app is opened within the LINE client.
                 if (liff.isInClient()) {
                     if (!liff.isLoggedIn()) {
-                        // If the user is not logged in, the liff.login() method will redirect them
-                        // to the LINE login screen. After a successful login, they will be
-                        // redirected back to this page, and the script will re-initialize.
+                        // This will redirect the user, so the script will stop execution here
+                        // for this session. No need to set the loading state to false.
                         liff.login();
                     } else {
-                        // If the user is already logged in, retrieve their profile.
+                        // User is logged in, get profile and complete initialization.
                         const profile = await liff.getProfile();
                         setLineUserId(profile.userId);
+                        setIsLiffInitializing(false);
                     }
+                } else {
+                    // Not in the LINE client, so we are done with LIFF setup.
+                    setIsLiffInitializing(false);
                 }
-                // If the app is opened in an external browser, liff.isInClient() is false,
-                // and we do nothing. The app functions as a standard web form.
             } catch (error: any) {
                 const errorMessage = error.message || 'An unknown error occurred.';
                 console.error("LIFF logic failed:", error);
-                // Only display an error message if we are in the LINE client, as errors
-                // are expected in external browsers where the full LIFF context is not available.
                 if (typeof liff !== 'undefined' && liff.isInClient()) {
                     setLiffError(errorMessage);
                 }
+                // Stop initializing on error so the user can still use the form.
+                setIsLiffInitializing(false);
             }
         };
 
-        if (typeof liff !== 'undefined') {
-            initializeLiff();
-        } else {
-            console.warn("LIFF SDK not found. App will function without LINE integration.");
-        }
+        initializeLiff();
     }, []);
     
     const totalAmount = useMemo(() => {
@@ -189,6 +193,7 @@ const App: React.FC = () => {
                     onUpdateQuantity={handleUpdateQuantity}
                     onRemoveItem={handleRemoveItem}
                     onFormSubmit={handleFormSubmit}
+                    isInitializing={isLiffInitializing}
                 />
                 <Contact />
             </main>
