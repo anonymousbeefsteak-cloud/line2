@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { OrderItem, MenuItem } from '../types';
 
@@ -10,6 +9,7 @@ interface OrderSectionProps {
     onUpdateQuantity: (itemId: number, newQuantity: number) => void;
     onRemoveItem: (itemId: number) => void;
     onFormSubmit: (formData: any) => Promise<{success: boolean, message: string}>;
+    isInitializing: boolean;
 }
 
 const getDefaultPickupTime = () => {
@@ -18,7 +18,7 @@ const getDefaultPickupTime = () => {
     return defaultPickupTime.toISOString().slice(0, 16);
 };
 
-const OrderSection: React.FC<OrderSectionProps> = ({ orderItems, totalAmount, menuItems, onAddItem, onUpdateQuantity, onRemoveItem, onFormSubmit }) => {
+const OrderSection: React.FC<OrderSectionProps> = ({ orderItems, totalAmount, menuItems, onAddItem, onUpdateQuantity, onRemoveItem, onFormSubmit, isInitializing }) => {
     const [formData, setFormData] = useState({
         customerName: '',
         customerPhone: '',
@@ -152,8 +152,13 @@ const OrderSection: React.FC<OrderSectionProps> = ({ orderItems, totalAmount, me
                             <span className="text-green-800">${totalAmount}</span>
                         </div>
                         
-                        <button type="submit" className="w-full bg-primary text-white py-3 px-6 rounded-full font-medium transition-all duration-300 hover:bg-primary/90 hover:shadow-lg active:scale-95 flex items-center justify-center disabled:opacity-50" disabled={isLoading || orderItems.length === 0}>
-                            {isLoading ? (
+                        <button type="submit" className="w-full bg-primary text-white py-3 px-6 rounded-full font-medium transition-all duration-300 hover:bg-primary/90 hover:shadow-lg active:scale-95 flex items-center justify-center disabled:opacity-50" disabled={isLoading || orderItems.length === 0 || isInitializing}>
+                            {isInitializing ? (
+                                <>
+                                  <i className="fa fa-spinner fa-spin mr-2"></i> 
+                                  <span>正在連接 LINE...</span>
+                                </>
+                            ) : isLoading ? (
                                 <i className="fa fa-circle-o-notch fa-spin text-xl"></i>
                             ) : (
                                 <><i className="fa fa-paper-plane mr-2"></i> 送出訂單</>
