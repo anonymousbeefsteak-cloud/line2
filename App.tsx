@@ -28,25 +28,38 @@ const App: React.FC = () => {
     useEffect(() => {
         const initializeLiff = async () => {
             try {
-                // Initialize the LIFF SDK with the correct LIFF ID from the LINE Developers Console.
                 await liff.init({ liffId: "2008274702-xD3Xd2M6" });
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    setLineUserId(profile.userId);
+
+                // Only perform login/profile retrieval if the app is opened within the LINE client.
+                if (liff.isInClient()) {
+                    if (!liff.isLoggedIn()) {
+                        // If the user is not logged in, the liff.login() method will redirect them
+                        // to the LINE login screen. After a successful login, they will be
+                        // redirected back to this page, and the script will re-initialize.
+                        liff.login();
+                    } else {
+                        // If the user is already logged in, retrieve their profile.
+                        const profile = await liff.getProfile();
+                        setLineUserId(profile.userId);
+                    }
                 }
+                // If the app is opened in an external browser, liff.isInClient() is false,
+                // and we do nothing. The app functions as a standard web form.
             } catch (error: any) {
                 const errorMessage = error.message || 'An unknown error occurred.';
-                console.error("LIFF initialization failed:", error);
-                setLiffError(errorMessage);
+                console.error("LIFF logic failed:", error);
+                // Only display an error message if we are in the LINE client, as errors
+                // are expected in external browsers where the full LIFF context is not available.
+                if (typeof liff !== 'undefined' && liff.isInClient()) {
+                    setLiffError(errorMessage);
+                }
             }
         };
 
         if (typeof liff !== 'undefined') {
             initializeLiff();
         } else {
-            const warningMessage = "LIFF SDK not found. Please ensure it is included in your index.html.";
-            console.warn(warningMessage);
-            setLiffError(warningMessage);
+            console.warn("LIFF SDK not found. App will function without LINE integration.");
         }
     }, []);
     
